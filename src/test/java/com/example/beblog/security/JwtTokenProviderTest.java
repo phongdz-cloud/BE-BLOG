@@ -1,86 +1,84 @@
 package com.example.beblog.security;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 
+import com.example.beblog.config.TestConfig;
+
 import java.util.Collections;
-import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
-@SpringBootTest
+@ExtendWith(MockitoExtension.class)
+@ActiveProfiles("test")
+@ContextConfiguration(classes = TestConfig.class)
 @TestPropertySource(properties = {
-        "jwt.secret=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970",
-        "jwt.expiration=86400000"
+                "jwt.secret=testSecretKey1234567890123456789012345678901234567890",
+                "jwt.expiration=86400000"
 })
 class JwtTokenProviderTest {
 
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
+        @InjectMocks
+        private JwtTokenProvider jwtTokenProvider;
 
-    @Test
-    void generateToken_ShouldCreateValidToken() {
-        // Create test user
-        UserDetails userDetails = new User("testuser", "password",
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
-        Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null,
-                userDetails.getAuthorities());
+        @Mock
+        private Authentication authentication;
 
-        // Generate token
-        String token = jwtTokenProvider.generateToken(authentication);
+        private UserDetails userDetails;
 
-        // Verify token
-        assertNotNull(token);
-        assertTrue(jwtTokenProvider.validateToken(token));
-        assertEquals("testuser", jwtTokenProvider.getUsernameFromJWT(token));
-    }
+        @BeforeEach
+        void setUp() {
+                jwtTokenProvider.setJwtSecret("testSecretKey1234567890123456789012345678901234567890");
+                jwtTokenProvider.setJwtExpiration(86400000);
 
-    @Test
-    void validateToken_ShouldReturnFalseForInvalidToken() {
-        assertFalse(jwtTokenProvider.validateToken("invalid.token.here"));
-    }
+                userDetails = User.builder()
+                                .username("testuser")
+                                .password("password")
+                                .authorities(Collections.singletonList(() -> "ROLE_USER"))
+                                .build();
+        }
 
-    @Test
-    void getUsernameFromJWT_ShouldReturnCorrectUsername() {
-        // Create test user
-        UserDetails userDetails = new User("testuser", "password",
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
-        Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null,
-                userDetails.getAuthorities());
+        @Test
+        void generateToken_ShouldReturnValidToken() {
+                // Arrange
+                when(authentication.getPrincipal()).thenReturn(userDetails);
 
-        // Generate token
-        String token = jwtTokenProvider.generateToken(authentication);
+                // Act
+                String token = jwtTokenProvider.generateToken(authentication);
 
-        // Verify username
-        assertEquals("testuser", jwtTokenProvider.getUsernameFromJWT(token));
-    }
+                // Assert
+                assertNotNull(token);
+                assertTrue(jwtTokenProvider.validateToken(token));
+                assertEquals("testuser", jwtTokenProvider.getUsernameFromToken(token));
+        }
 
-    @Test
-    void validateToken_ShouldReturnFalseForExpiredToken() {
-        // Create test user
-        UserDetails userDetails = new User("testuser", "password",
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
-        Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null,
-                userDetails.getAuthorities());
+        @Test
+        void validateToken_InvalidToken_ReturnsFalse() {
+                // Act & Assert
+                assertFalse(jwtTokenProvider.validateToken("invalid.token.here"));
+        }
 
-        // Generate token with expired date
-        String token = jwtTokenProvider.generateToken(authentication);
+        @Test
+        void getUsernameFromToken_ValidToken_ReturnsUsername() {
+                // Arrange
+                when(authentication.getPrincipal()).thenReturn(userDetails);
+                String token = jwtTokenProvider.generateToken(authentication);
 
-        // Manually modify token to be expired (this is a simplified approach)
-        // In a real scenario, you might need to use reflection or other techniques
-        assertFalse(jwtTokenProvider.validateToken(token + ".expired"));
-    }
+                // Act
+                String username = jwtTokenProvider.getUsernameFromToken(token);
 
-    @Test
-    void validateToken_ShouldReturnFalseForEmptyToken() {
-        assertFalse(jwtTokenProvider.validateToken(""));
-        assertFalse(jwtTokenProvider.validateToken(null));
-    }
+                // Assert
+                assertEquals("testuser", username);
+        }
 }

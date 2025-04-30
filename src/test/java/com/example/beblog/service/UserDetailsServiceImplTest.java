@@ -1,5 +1,6 @@
 package com.example.beblog.service;
 
+import com.example.beblog.config.TestConfig;
 import com.example.beblog.model.ERole;
 import com.example.beblog.model.Role;
 import com.example.beblog.model.User;
@@ -7,102 +8,101 @@ import com.example.beblog.repository.RoleRepository;
 import com.example.beblog.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
-@SpringBootTest
+@ExtendWith(MockitoExtension.class)
 @ActiveProfiles("test")
+@ContextConfiguration(classes = TestConfig.class)
+@TestPropertySource(properties = {
+        "jwt.secret=testSecretKey1234567890123456789012345678901234567890",
+        "jwt.expiration=86400000"
+})
 class UserDetailsServiceImplTest {
 
-    @Autowired
+    @InjectMocks
     private UserDetailsServiceImpl userDetailsService;
 
-    @Autowired
+    @Mock
     private UserRepository userRepository;
 
-    @Autowired
+    @Mock
     private RoleRepository roleRepository;
+
+    private User user;
+    private Role role;
+    private Set<Role> roles;
 
     @BeforeEach
     void setUp() {
-        userRepository.deleteAll();
-        roleRepository.deleteAll();
+        role = new Role();
+        role.setName(ERole.ROLE_USER);
 
-        // Create roles
-        Role userRole = new Role();
-        userRole.setName(ERole.ROLE_USER);
-        roleRepository.save(userRole);
+        roles = new HashSet<>();
+        roles.add(role);
 
-        Role adminRole = new Role();
-        adminRole.setName(ERole.ROLE_ADMIN);
-        roleRepository.save(adminRole);
+        user = new User();
+        user.setUsername("testuser");
+        user.setPassword("password");
+        user.setRoles(roles);
     }
 
     @Test
     void loadUserByUsername_ShouldReturnUserDetails_WhenUserExists() {
-        // Create test user
-        User user = new User();
-        user.setUsername("testuser");
-        user.setEmail("test@example.com");
-        user.setPassword("password123");
+        // Arrange
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
 
-        Set<Role> roles = new HashSet<>();
-        roles.add(roleRepository.findByName(ERole.ROLE_USER).orElseThrow());
-        user.setRoles(roles);
+        // Act
+        var userDetails = userDetailsService.loadUserByUsername("testuser");
 
-        userRepository.save(user);
-
-        // Load user details
-        UserDetails userDetails = userDetailsService.loadUserByUsername("testuser");
-
-        // Verify user details
+        // Assert
         assertNotNull(userDetails);
         assertEquals("testuser", userDetails.getUsername());
-        assertEquals("password123", userDetails.getPassword());
+        assertEquals("password", userDetails.getPassword());
         assertTrue(userDetails.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_USER")));
-    }
-
-    @Test
-    void loadUserByUsername_ShouldThrowException_WhenUserDoesNotExist() {
-        // Try to load non-existent user
-        assertThrows(UsernameNotFoundException.class, () -> {
-            userDetailsService.loadUserByUsername("nonexistentuser");
-        });
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_USER")));
     }
 
     @Test
     void loadUserByUsername_ShouldReturnUserWithMultipleRoles() {
-        // Create test user with multiple roles
-        User user = new User();
-        user.setUsername("testuser");
-        user.setEmail("test@example.com");
-        user.setPassword("password123");
+        // Arrange
+        Role adminRole = new Role();
+        adminRole.setName(ERole.ROLE_ADMIN);
+        roles.add(adminRole);
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
 
-        Set<Role> roles = new HashSet<>();
-        roles.add(roleRepository.findByName(ERole.ROLE_USER).orElseThrow());
-        roles.add(roleRepository.findByName(ERole.ROLE_ADMIN).orElseThrow());
-        user.setRoles(roles);
+        // Act
+        var userDetails = userDetailsService.loadUserByUsername("testuser");
 
-        userRepository.save(user);
-
-        // Load user details
-        UserDetails userDetails = userDetailsService.loadUserByUsername("testuser");
-
-        // Verify user has both roles
+        // Assert
         assertNotNull(userDetails);
         assertEquals(2, userDetails.getAuthorities().size());
         assertTrue(userDetails.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_USER")));
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_USER")));
         assertTrue(userDetails.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")));
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN")));
+    }
+
+    @Test
+    void loadUserByUsername_ShouldThrowException_WhenUserDoesNotExist() {
+        // Arrange
+        when(userRepository.findByUsername("nonexistent")).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(UsernameNotFoundException.class,
+                () -> userDetailsService.loadUserByUsername("nonexistent"));
     }
 }

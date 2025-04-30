@@ -12,6 +12,8 @@ import com.example.beblog.repository.RoleRepository;
 import com.example.beblog.repository.UserRepository;
 import com.example.beblog.security.JwtTokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashSet;
@@ -28,7 +31,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -121,5 +123,17 @@ public class AuthController {
         userRepository.save(user);
 
         return ResponseEntityWrapper.success("User registered successfully!", "User registered successfully!");
+    }
+
+    @Operation(summary = "Logout", description = "Logout the current user")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Logout successful", content = @Content(schema = @Schema(implementation = ApiResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(implementation = ApiResponse.class)))
+    })
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/logout")
+    public org.springframework.http.ResponseEntity<ApiResponse<String>> logout() {
+        SecurityContextHolder.clearContext();
+        return ResponseEntityWrapper.success("Logout successful");
     }
 }
