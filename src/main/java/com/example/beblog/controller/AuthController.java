@@ -1,8 +1,9 @@
 package com.example.beblog.controller;
 
+import com.example.beblog.common.ApiResponse;
+import com.example.beblog.common.ResponseEntityWrapper;
 import com.example.beblog.dto.JwtResponse;
 import com.example.beblog.dto.LoginRequest;
-import com.example.beblog.dto.MessageResponse;
 import com.example.beblog.dto.SignupRequest;
 import com.example.beblog.model.ERole;
 import com.example.beblog.model.Role;
@@ -14,8 +15,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -42,38 +43,44 @@ public class AuthController {
 
     @Operation(summary = "Sign in", description = "Authenticate user and return JWT token")
     @PostMapping("/signin")
-    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+    public org.springframework.http.ResponseEntity<ApiResponse<JwtResponse>> authenticateUser(
+            @Valid @RequestBody LoginRequest loginRequest) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtTokenProvider.generateToken(authentication);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String jwt = jwtTokenProvider.generateToken(authentication);
 
-        User user = userRepository.findByUsername(loginRequest.getUsername())
-                .orElseThrow(() -> new RuntimeException("Error: User not found."));
+            User user = userRepository.findByUsername(loginRequest.getUsername())
+                    .orElseThrow(() -> new RuntimeException("Error: User not found."));
 
-        List<String> roles = user.getRoles().stream()
-                .map(role -> role.getName().name())
-                .collect(Collectors.toList());
+            List<String> roles = user.getRoles().stream()
+                    .map(role -> role.getName().name())
+                    .collect(Collectors.toList());
 
-        return ResponseEntity.ok(new JwtResponse(jwt,
-                user.getId(),
-                user.getUsername(),
-                user.getEmail(),
-                roles));
+            JwtResponse jwtResponse = new JwtResponse(jwt,
+                    user.getId(),
+                    user.getUsername(),
+                    user.getEmail(),
+                    roles);
+
+            return ResponseEntityWrapper.success(jwtResponse, "Login successful");
+        } catch (BadCredentialsException e) {
+            return ResponseEntityWrapper.unauthorized("Invalid username or password");
+        }
     }
 
     @Operation(summary = "Sign up", description = "Register a new user")
     @PostMapping("/signup")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
+    public org.springframework.http.ResponseEntity<ApiResponse<String>> registerUser(
+            @Valid @RequestBody SignupRequest signUpRequest) {
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
-            return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Error: Username is already taken!"));
+            return ResponseEntityWrapper.error("Error: Username is already taken!");
         }
 
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-            return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Error: Email is already in use!"));
+            return ResponseEntityWrapper.error("Error: Email is already in use!");
         }
 
         User user = new User();
@@ -89,7 +96,7 @@ public class AuthController {
                     .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
             roles.add(userRole);
         } else {
-            strRoles.forEach(role -> {
+            for (String role : strRoles) {
                 switch (role.toLowerCase()) {
                     case "admin" -> {
                         Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
@@ -107,12 +114,12 @@ public class AuthController {
                         roles.add(userRole);
                     }
                 }
-            });
+            }
         }
 
         user.setRoles(roles);
         userRepository.save(user);
 
-        return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+        return ResponseEntityWrapper.success("User registered successfully!", "User registered successfully!");
     }
 }
