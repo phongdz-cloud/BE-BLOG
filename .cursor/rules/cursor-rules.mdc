@@ -1,0 +1,96 @@
+<!--
+title: Quy tắc viết code cho Cursor (Java Spring)
+description: Các quy tắc để AI giữ style, tái sử dụng code, viết comment rõ ràng, tránh làm hỏng logic đã có, thêm logging và loại bỏ import không sử dụng.
+-->
+
+# Cursor Rules
+
+## 1. Không sửa code cũ nếu không cần thiết
+
+Chỉ bổ sung tính năng hoặc mở rộng logic mới.  
+**Tránh sửa các đoạn code hiện có**, đặc biệt là các đoạn đã có unit test, trừ khi thật sự cần thiết.  
+Ưu tiên thêm code mới hoặc override ở mức controller/service.  
+
+✅ Tốt: Thêm hàm mới xử lý logic thay vì chỉnh sửa hàm đang hoạt động ổn định.  
+🚫 Không nên: Sửa đổi logic của hàm cũ chỉ để đổi cách viết.
+
+---
+
+## 2. Giữ nguyên cấu trúc code hiện tại
+
+Tuân thủ cấu trúc hiện tại của codebase.  
+Chỉ thực hiện thay đổi nhỏ như thêm hàm, thêm logic phụ, hoặc sửa lỗi cụ thể.  
+**Không viết lại toàn bộ đoạn code trừ khi có yêu cầu rõ ràng.**
+
+Ví dụ:  
+✅ Tốt: "Thêm logging cho hàm handleRequest."  
+🚫 Không nên: "Viết lại hàm handleRequest có thêm logging."
+
+---
+
+## 3. Tuân thủ style và naming convention hiện có
+
+Sử dụng đúng cách đặt tên, thụt lề và định dạng đã có trong file hoặc dự án.  
+Không thay đổi convention hoặc áp dụng style mới nếu không được chỉ định.  
+Nếu có nhiều cách viết, hãy chọn cách giống với phần lớn mã hiện tại.
+
+---
+
+## 4. Viết comment rõ ràng
+
+Khi thêm hoặc cập nhật logic quan trọng, hãy viết comment ngắn gọn, rõ ràng để giải thích mục đích xử lý hoặc đoạn code khó hiểu.  
+Tránh viết comment cho những dòng đã rõ ràng qua tên hàm/biến.
+
+✅ `// Kiểm tra người dùng đã xác thực 2FA chưa`  
+🚫 `// Gọi hàm check2FA`
+
+---
+
+## 5. Thêm logging cho các phần xử lý quan trọng
+
+Với các hành động quan trọng như xử lý thanh toán, xác thực, gọi API bên ngoài, hoặc ghi dữ liệu vào database,  
+**luôn thêm logging để theo dõi luồng xử lý, trạng thái và lỗi** (nếu có).
+
+- Logging cần rõ ràng, có nội dung mô tả và dữ liệu liên quan.
+- Ưu tiên dùng logger đã có sẵn trong hệ thống (`logger.info()`, `logger.error()`, `logger.warn()`, v.v.).
+- Không log thông tin nhạy cảm (password, token...).
+
+Ví dụ:
+✅ `logger.info("Bắt đầu xử lý thanh toán cho orderId=%s", orderId)`  
+✅ `logger.error("Gọi API thất bại: %s", err)`
+
+🚫 Không nên:
+- `logger.debug("test")`
+- `System.out.println("Lỗi rồi")`
+
+---
+
+## 6. Loại bỏ các import không sử dụng
+
+Trước khi commit code, hãy đảm bảo rằng không có import thừa hoặc không sử dụng trong file.  
+**Không để lại bất kỳ import nào không được sử dụng trong code.**
+
+- Sử dụng công cụ kiểm tra (như IDE hoặc Maven) để phát hiện các import không sử dụng.
+- Nếu thấy import không cần thiết, hãy xóa ngay để giảm thiểu sự rối rắm và bảo trì code.
+
+Ví dụ:
+✅ Nếu không sử dụng `import org.springframework.beans.factory.annotation.Autowired`, hãy loại bỏ dòng import đó.  
+🚫 Không nên: Để lại import không dùng đến như `import java.util.List` nếu không sử dụng trong class.
+
+---
+
+## 7. Ưu tiên tái sử dụng code
+
+Trước khi viết mới, hãy kiểm tra xem service, helper, hoặc function nào đã có thể dùng lại.  
+Nếu cần viết mới, hãy đảm bảo đoạn code đó có thể tái sử dụng và đặt vào đúng layer (service, utils, etc.).
+
+✅ Sử dụng lại `UserService.isPremiumUser()` nếu đã tồn tại.
+
+---
+
+## 8. Giải thích thay đổi khi cần thiết
+
+Nếu thực hiện thay đổi ảnh hưởng đến flow xử lý, hãy thêm comment mô tả ngắn gọn lý do thay đổi.  
+Giúp việc review và bảo trì dễ dàng hơn về sau.
+
+---
