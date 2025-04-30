@@ -1,0 +1,14 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+be-blog,com.example.beblog.dto,JwtResponse,0,21,0,0,0,8,0,1,0,1
+be-blog,com.example.beblog.controller,AuthController,25,190,0,11,0,46,5,10,5,4
+be-blog,com.example.beblog.model,User,4,7,0,0,2,3,1,1,1,1
+be-blog,com.example.beblog.model,ERole,0,34,0,0,0,4,0,1,0,1
+be-blog,com.example.beblog.config,WebConfig,0,47,0,0,0,7,0,2,0,2
+be-blog,com.example.beblog.config,OpenApiConfig,0,3,0,0,0,1,0,1,0,1
+be-blog,com.example.beblog.config,DataInitializer,0,34,0,4,0,6,0,3,0,1
+be-blog,com.example.beblog.security,JwtAuthenticationFilter,6,63,1,7,1,15,1,5,0,2
+be-blog,com.example.beblog.security,SecurityConfig.new AuthenticationEntryPoint() {...},0,11,0,0,0,3,0,2,0,2
+be-blog,com.example.beblog.security,JwtTokenProvider,9,68,0,0,6,23,0,4,0,4
+be-blog,com.example.beblog.security,SecurityConfig,0,100,0,0,0,18,0,9,0,9
+be-blog,com.example.beblog.service,UserDetailsServiceImpl,0,40,0,0,0,9,0,3,0,3
+be-blog,com.example.beblog,BeBlogApplication,5,3,0,0,2,1,1,1,1,1
